@@ -11,7 +11,10 @@ from custom_types import (
     ConfigResponse,
     ResponseRequiredRequest,
 )
-from llm import LlmClient 
+from typing import Optional
+from socket_manager import manager
+from llm import LlmClient  # or use .llm_with_func_calling
+from db import get_db, get_all_calls, update_call, delete_call
 
 load_dotenv(override=True)
 app = FastAPI()
@@ -21,7 +24,11 @@ origins = [
     # "https://yourdomain.com",
 ]
 app.add_middleware(
-    CORSMiddleware, allow_origins=origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"],
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 retell = Retell(api_key=os.environ["RETELL_API_KEY"])
 
@@ -134,3 +141,48 @@ async def websocket_handler(websocket: WebSocket, call_id: str):
         await websocket.close(1011, "Server error")
     finally:
         print(f"LLM WebSocket connection closed for {call_id}")
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket, client_id: Optional[str] = None):
+    if client_id is None:
+        client_id = websocket.query_params.get("client_id")
+
+    if client_id is None:
+        await websocket.close(code=4001)
+        return
+    # save this client into server memory
+    await manager.connect(websocket, client_id)
+    try:
+        while True:
+            data = await websocket.receive_json()
+            event = data["event"]
+            print(event)
+            if event == "get_db":
+                # Retrieve all calls from the database
+                db = get_db()
+                message = {
+                    "event": "db_response",
+                    "data": db,
+                }
+                # Send the calls data back to the client
+                await manager.send_personal_message(
+                    message,
+                    websocket,
+                )
+            if event == "get_calls":
+                calls = get_all_calls()
+                message = {"event": "calls_response", "data": calls}
+                await manager.send_personal_message(message, websocket)
+            if event == "get_all_dbs":
+                db = get_db()
+                calls = get_all_calls()
+                message = {"event": "combined_response", "calls": calls, "db": db}
+                await manager.send_personal_message(message, websocket)
+
+    except WebSocketDisconnect:
+        print("Disconnecting...", client_id)
+        await manager.disconnect(client_id)
+    except Exception as e:
+        print("Error:", str(e))
+        await manager.disconnect(client_id)
