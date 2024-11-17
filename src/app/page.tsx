@@ -4,6 +4,7 @@ import { hydrateRoot } from 'react-dom/client';
 import { useState } from 'react'
 import { Eye, EyeOff, FileText, MessageSquare, UserCog, Search, User, BotIcon as Robot } from 'lucide-react'
 import { motion } from 'framer-motion'
+import logo from '../img/logo_dark.png'
 
 interface ChatMessage {
   sender: string
@@ -69,9 +70,12 @@ export default function AdminDashboard() {
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center">
-              <span className="text-xl font-semibold bg-gradient-to-r from-[#64A8F0] to-[#1c344e] bg-clip-text text-transparent">
-                TalkTuahAI
-              </span>
+              <div className="flex items-center">
+                <img src={logo.src} alt="Logo" className="h-12 w-12 mr-2" />
+                <span className="text-xl font-semibold bg-gradient-to-r from-[#64A8F0] to-[#1c344e] bg-clip-text text-transparent">
+                  TalkTuahAI
+                </span>
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <button className="px-4 py-2 text-sm text-[#FFFFFF]/70 hover:text-[#FFFFFF] transition-colors">
