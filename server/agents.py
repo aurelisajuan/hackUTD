@@ -1,6 +1,5 @@
 from swarm import Agent, Swarm
 from dotenv import load_dotenv
-from manager import get_account_info
 import os
 import math
 load_dotenv()
@@ -52,7 +51,7 @@ class AgentSwarm:
       instructions=payments_instructions,
     )
 
-    self.accounts.functions = [self.transfer_back_to_triage, get_account_info]
+    self.accounts.functions = [self.transfer_back_to_triage]
     self.payments.functions = [self.transfer_back_to_triage]
 
     self.current_agent = self.triage_agent
