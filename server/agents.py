@@ -56,7 +56,6 @@ class AgentSwarm:
 
     self.current_agent = self.triage_agent
 
-
   # Transfer functions
   def transfer_to_accounts(self):
     print("transferring to accounts")
