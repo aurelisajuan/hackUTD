@@ -14,7 +14,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "TalkTuahAI",
+  title: "TalkTuahBank",
   description: "HackUTD 2024",
 };
 
