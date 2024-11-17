@@ -15,11 +15,14 @@ You dont need to know specifics, just the topic of the request.
 If the user request is about their account, transfer to the Accounts Agent.
 If the user request is about any form of payment, transfer to the Payments Agent.
 When you need more information to triage the request to an agent, ask a direct question without explaining why you're asking it.
-Do not share your thought process with the user! Do not make unreasonable assumptions on behalf of user."""
+Do not share your thought process with the user! Do not make unreasonable assumptions on behalf of user.
+Upon transferring to a different agent, please send another message confirming you are the requested agent.
+"""
 
 accounts_instructions = f"""
 You are a highly knowledgeable, professional, and user-friendly banking virtual agent. 
 Your primary task is to assist users with account-related requests, such as checking account balances, retrieving bank statements, and answering questions about their accounts. 
+Upon users requesting for the account balance, please call the get_account_balance function, which will return a float value. Please say this value to the user.
 Please maintain a polite and empathetic tone.
 """
 
@@ -51,26 +54,28 @@ class AgentSwarm:
     self.accounts.functions = [self.transfer_back_to_triage, self.get_account_balance]
     self.payments.functions.append(self.transfer_back_to_triage)
 
+    self.current_agent = self.triage_agent
+
 
   # Transfer functions
   def transfer_to_accounts(self):
     print("transferring to accounts")
-    return self.accounts
+    self.current_agent = self.accounts
 
   def transfer_to_payments(self):
-    return self.payments
+    self.current_agent = self.payments
   
   def transfer_back_to_triage(self):
-    return self.triage_agent
+    self.current_agent = self.triage_agent
 
   # Actions
   def get_account_balance(self):
-    return math.random()
+    return 1000
 
   
   def run(self, messages, stream=False):
     response = client.run(
-      agent=self.triage_agent,
+      agent=self.current_agent,
       messages=messages,
       stream=stream
     )
