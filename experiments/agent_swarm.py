@@ -10,7 +10,7 @@ openai_client = OpenAI()
 from typing import Dict, List, Tuple
 from db import get_db, set_db  # Importing the banking db functions
 import logging
-
+from datetime import datetime
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -62,6 +62,7 @@ class AgentSwarm:
             socket: Handles real-time communication (e.g., sending messages).
         """
         self.socket = socket
+        self.messages = []  # Internal message history
         
         # Initialize Agents with their instructions and functions
         self.triage_agent = Agent(
@@ -73,7 +74,7 @@ class AgentSwarm:
         self.accounts_agent = Agent(
             name="Accounts Agent",
             instructions=accounts_instructions,
-            functions=[self.transfer_back_to_triage, self.handle_account_balance, self.retrieve_bank_statement]
+            functions=[self.transfer_to_payments, self.handle_account_balance, self.retrieve_bank_statement]
         )
         
         self.payments_agent = Agent(
@@ -81,6 +82,8 @@ class AgentSwarm:
             instructions=payments_instructions,
             functions=[self.transfer_back_to_triage, self.transfer_funds, self.schedule_payment, self.cancel_payment]
         )
+        
+        self.current_agent = self.triage_agent
     
     # -------------------- Helper Functions -------------------- #
     
@@ -181,6 +184,7 @@ class AgentSwarm:
             Agent: The Accounts Agent instance.
         """
         logging.info("Transferring to Accounts Agent.")
+        self.current_agent = self.accounts_agent
         return self.accounts_agent
     
     def transfer_to_payments(self, context_variables, user_message: str):
@@ -195,11 +199,12 @@ class AgentSwarm:
             Agent: The Payments Agent instance.
         """
         logging.info("Transferring to Payments Agent.")
+        self.current_agent = self.payments_agent
         return self.payments_agent
     
     def transfer_back_to_triage(self, context_variables, response: str):
         """
-        Transfers the conversation back to the Triage Agent after completing a task.
+        Transfers the conversation back to the Triage Agent after completing a task or if you are unable to complete the task.
         
         Args:
             context_variables: Current state of the database or context.
@@ -327,7 +332,7 @@ class AgentSwarm:
             "from_account": from_account,
             "to_account": to_account,
             "amount": amount,
-            "date": "2024-06-01",  # Replace with actual date logic
+            "date": datetime.now().strftime("%Y-%m-%d"),
             "status": "Completed"
         }
         
@@ -384,13 +389,13 @@ class AgentSwarm:
         new_payment_id = self._generate_payment_id()
         current_db["payments"][new_payment_id] = {
             "from_account": account_id,
-            "to_account": payee,  # Assuming payee is another account ID or external identifier
+            "to_account": payee,  
             "amount": amount,
             "date": date,
             "status": "Scheduled"
         }
         
-        set_db(current_db)  # Update the database
+        set_db(current_db) 
         
         return Result(
             value=f"Payment of ${amount:.2f} to {payee} scheduled on {date}. Payment ID: {new_payment_id}.",
@@ -451,13 +456,31 @@ class AgentSwarm:
             messages (List[Dict[str, str]]): List of messages to process.
             stream (bool): Whether to stream the response.
         
-        Returns:
-            Response from the Swarm client.
+        Yields:
+            str: The assistant's response chunks.
         """
+        # Append new messages to internal message history
+        self.messages.extend(messages)
+        logging.info(f"Current message history: {self.messages}")
+        
+        # Run the swarm with the accumulated messages
         response = client.run(
-            agent=self.triage_agent,
-            messages=messages,
+            agent=self.current_agent,
+            messages=self.messages,
             stream=stream
         )
-        logging.info("Swarm run completed.")
-        return response
+        
+        # Capture the assistant's response and append to messages
+        bot_response = ""
+        for chunk in response:
+            if "content" in chunk and chunk['content']:
+                yield chunk['content']
+                bot_response += chunk['content']
+        print()  # For newline after the response
+        
+        # Append the assistant's response to the message history
+        if bot_response:
+            self.messages.append({
+                "role": "assistant",
+                "content": bot_response
+            })
