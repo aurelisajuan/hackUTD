@@ -1,5 +1,6 @@
 from swarm import Agent, Swarm
 from dotenv import load_dotenv
+from manager import get_account_info
 import os
 import math
 load_dotenv()
@@ -22,8 +23,8 @@ Upon transferring to a different agent, please send another message confirming y
 accounts_instructions = f"""
 You are a highly knowledgeable, professional, and user-friendly banking virtual agent. 
 Your primary task is to assist users with account-related requests, such as checking account balances, retrieving bank statements, and answering questions about their accounts. 
-Upon users requesting for the account balance, please call the get_account_balance function, which will return a float value. Please say this value to the user.
 Please maintain a polite and empathetic tone.
+When asked a question related to accounts (such as balances, transactions, etc), please call the get_account_info function, which will return a dictionary of account information. Use this information to provide the best answer to the user's request.
 """
 
 payments_instructions = f"""
@@ -51,8 +52,8 @@ class AgentSwarm:
       instructions=payments_instructions,
     )
 
-    self.accounts.functions = [self.transfer_back_to_triage, self.get_account_balance]
-    self.payments.functions.append(self.transfer_back_to_triage)
+    self.accounts.functions = [self.transfer_back_to_triage, get_account_info]
+    self.payments.functions = [self.transfer_back_to_triage]
 
     self.current_agent = self.triage_agent
 
@@ -67,11 +68,6 @@ class AgentSwarm:
   def transfer_back_to_triage(self):
     self.current_agent = self.triage_agent
 
-  # Actions
-  def get_account_balance(self):
-    return 1000
-
-  
   def run(self, messages, stream=False):
     response = client.run(
       agent=self.current_agent,

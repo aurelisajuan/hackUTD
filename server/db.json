@@ -1,0 +1,37 @@
+{
+  "users": {
+    "user1": {
+      "name": "Bill Zhang",
+      "accounts": ["ACC123"]
+    }
+  },
+  "accounts": {
+    "ACC123": {
+      "balance": 2500.0,
+      "statements": {
+        "November": [
+          {
+            "date": "2024-11-13",
+            "description": "Flight to HackUTD",
+            "amount": -500.00
+          },
+          {
+            "date": "2024-11-14",
+            "description": "Dinner with friends",
+            "amount": -100.00
+          }
+        ]
+  
+      }
+    }
+  },
+  "payments": {
+    "PAY002": {
+      "from_account": "ACC123",
+      "to_account": "BillyBob",
+      "amount": 500,
+      "date": "2024-11-13",
+      "status": "Completed"
+    }
+  }
+}

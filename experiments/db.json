@@ -1,0 +1,26 @@
+{
+  "users": {
+    "user1": {
+      "name": "Bill Zhang",
+      "accounts": ["ACC123"]
+    }
+  },
+  "accounts": {
+    "ACC123": {
+      "balance": 2500.0,
+      "statements": {
+        "January 12th": "Transaction 1: -$500.00\nTransaction 2: +$1500.00",
+        "February 13th": "Transaction 1: -$300.00\nTransaction 2: +$800.00"
+      }
+    }
+  },
+  "payments": {
+    "PAY002": {
+      "from_account": "ACC123",
+      "to_account": "ACC456",
+      "amount": 150.00,
+      "date": "2024-05-15",
+      "status": "Completed"
+    }
+  }
+}
