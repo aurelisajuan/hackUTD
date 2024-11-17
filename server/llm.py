@@ -2,7 +2,7 @@ from openai import AsyncOpenAI
 from swarm import Swarm
 import os
 from typing import List
-from .custom_types import (
+from custom_types import (
     ResponseRequiredRequest,
     ResponseResponse,
     Utterance,
