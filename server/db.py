@@ -5,7 +5,7 @@ import random
 # Initial Banking Database Structure
 db = {
     "users": {
-        "+1-408-585-8267": {
+        "+14085858267": {
             "name": "Bill Zhang",
             "accounts": ["ACC892", "ACC347"],
             "ssn": "784-29-5163",
@@ -14,16 +14,16 @@ db = {
             "email": "bill.zhang@outlook.com",
             "phone": "+1-408-585-8267",
         },
-        "+1-214-555-0123": {
-            "name": "John Doe",
+        "+19178286465": {
+            "name": "Warren Yun",
             "accounts": ["ACC123", "ACC456"],
             "ssn": "123-45-6789",
             "address": "123 Main St, Dallas, TX 75201",
             "date_of_birth": "1985-03-15",
-            "email": "john.doe@email.com",
-            "phone": "+1-214-555-0123",
+            "email": "warren.yun@email.com",
+            "phone": "+1-917-828-6465",
         },
-        "+1-469-555-0456": {
+        "+14695550456": {
             "name": "Jane Smith",
             "accounts": ["ACC789", "ACC790", "ACC791"],
             "ssn": "987-65-4321",

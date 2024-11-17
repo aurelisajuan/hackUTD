@@ -14,7 +14,7 @@ from custom_types import (
 from typing import Optional
 from socket_manager import manager
 from llm import LlmClient  # or use .llm_with_func_calling
-from db import get_db, get_all_calls, update_call, delete_call
+from db import get_db, get_all_calls, update_call, delete_call, db
 
 load_dotenv(override=True)
 app = FastAPI()
@@ -31,7 +31,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 retell = Retell(api_key=os.environ["RETELL_API_KEY"])
-
 
 # Handle webhook from Retell server. This is used to receive events from Retell server.
 # Including call_started, call_ended, call_analyzed
@@ -74,7 +73,7 @@ async def handle_webhook(request: Request):
 async def websocket_handler(websocket: WebSocket, call_id: str):
     try:
         await websocket.accept()
-        llm_client = LlmClient()
+        llm_client = None
 
         # Send optional config to Retell server
         config = ConfigResponse(
@@ -86,19 +85,24 @@ async def websocket_handler(websocket: WebSocket, call_id: str):
             response_id=1,
         )
         await websocket.send_json(config.__dict__)
-
-        # Send first message to signal ready of server
         response_id = 0
-        first_event = llm_client.draft_begin_message()
-        await websocket.send_json(first_event.__dict__)
+
 
         async def handle_message(request_json):
             nonlocal response_id
-
+            nonlocal llm_client
             # There are 5 types of interaction_type: call_details, pingpong, update_only, response_required, and reminder_required.
             # Not all of them need to be handled, only response_required and reminder_required.
             if request_json["interaction_type"] == "call_details":
-                print(json.dumps(request_json, indent=2))
+                # print(json.dumps(request_json, indent=2))
+                print(request_json["call"]["from_number"])
+                llm_client = LlmClient(db["users"][request_json["call"]["from_number"]]["name"])
+                llm_client.change_number(request_json["call"]["from_number"])
+                # Send first message to signal ready of server
+                
+                first_event = llm_client.draft_begin_message()
+                await websocket.send_json(first_event.__dict__)
+
                 return
             if request_json["interaction_type"] == "ping_pong":
                 await websocket.send_json(

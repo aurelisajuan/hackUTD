@@ -10,22 +10,31 @@ from custom_types import (
 # from agents import AgentSwarm, triage_instructions
 from agents.triage_agent import triage_instructions
 from agent_swarm import AgentSwarm
+from db import db
 
-begin_sentence = "Hey there, I'm the TalkTuahBank AI. How can I help you?"
+
 
 
 class LlmClient:
-    def __init__(self):
+    def __init__(self, name: str):
       self.swarm = AgentSwarm()
+      self.number = "+14695550456"
+      self.name = name
 
     def draft_begin_message(self):
+        begin_sentence = f"Hey {self.name}, I'm the TalkTuahBank AI. How can I help you?"
         response = ResponseResponse(
             response_id=0,
+            # content=f"Hey {db['users'][self.number]['name']}, I'm the TalkTuahBank AI. How can I help you?",
             content=begin_sentence,
             content_complete=True,
             end_call=False,
         )
         return response
+
+    def change_number(self, number: str):
+        print(f"Changing number to {number}")
+        self.number = number
 
     def convert_transcript_to_openai_messages(self, transcript: List[Utterance]):
         messages = []
