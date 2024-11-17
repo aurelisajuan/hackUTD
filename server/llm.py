@@ -62,11 +62,11 @@ class LlmClient:
         prompt = self.prepare_prompt(request)
         stream = self.swarm.run(prompt, stream=True)
 
-        async for chunk in stream:
-            if chunk.choices[0].delta.content is not None:
+        for chunk in stream:
+            if "content" in chunk and chunk['content']:
                 response = ResponseResponse(
                     response_id=request.response_id,
-                    content=chunk.choices[0].delta.content,
+                    content=chunk['content'],
                     content_complete=False,
                     end_call=False,
                 )
