@@ -117,13 +117,14 @@ export default function AdminDashboard() {
     id: "",
     name: "",
     ssn: "",
-    bankProfile: {
-      accountNumber: "",
-      balance: ""
-    }
+    address: "",
+    date_of_birth: "",
+    email: "",
+    phone: ""
   });
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [userAccounts, setUserAccounts] = useState<{accountNumber: string, balance: string}[]>([]);
 
   useEffect(() => {
     const wss = new WebSocket(
@@ -173,13 +174,15 @@ export default function AdminDashboard() {
     const selectedCall = data[id];
     if (selectedCall && bankData.users && bankData.users[selectedCall.user_id]) {
       const user = bankData.users[selectedCall.user_id];
-      const userAccounts = user.accounts.map(accId => {
+      const accounts = user.accounts.map(accId => {
         const account = bankData.accounts[accId];
         return {
           accountNumber: accId,
           balance: account ? `$${account.balance.toFixed(2)}` : "N/A"
         };
       });
+
+      setUserAccounts(accounts);
 
       // Update user info
       setUserInfo({
@@ -195,15 +198,15 @@ export default function AdminDashboard() {
       // Update transactions from payments
       const userTransactions: Transaction[] = Object.entries(bankData.payments)
         .filter(([_, payment]) =>
-          payment.from_account === userAccounts[0]?.accountNumber ||
-          payment.to_account === userAccounts[0]?.accountNumber
+          payment.from_account === accounts[0]?.accountNumber ||
+          payment.to_account === accounts[0]?.accountNumber
         )
         .map(([id, payment]) => ({
           id,
           date: payment.date,
-          description: `${payment.from_account === userAccounts[0]?.accountNumber ? 'Payment to' : 'Payment from'} ${payment.from_account === userAccounts[0]?.accountNumber ? payment.to_account : payment.from_account
+          description: `${payment.from_account === accounts[0]?.accountNumber ? 'Payment to' : 'Payment from'} ${payment.from_account === accounts[0]?.accountNumber ? payment.to_account : payment.from_account
             }`,
-          amount: `${payment.from_account === userAccounts[0]?.accountNumber ? '-' : '+'}$${payment.amount.toFixed(2)}`
+          amount: `${payment.from_account === accounts[0]?.accountNumber ? '-' : '+'}$${payment.amount.toFixed(2)}`
         }));
 
       setTransactions(userTransactions);
@@ -275,7 +278,9 @@ export default function AdminDashboard() {
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                         className="flex items-center gap-2 text-lg font-semibold focus:outline-none"
                       >
-                        {selectedOption === 'info' ? 'User Information' : 'User Transactions'}
+                        {selectedOption === 'info' ? 'User Information' : 
+                         selectedOption === 'transactions' ? 'User Transactions' :
+                         'User Accounts'}
                         <ChevronDown className="h-4 w-4" />
                       </button>
                       {isDropdownOpen && (
@@ -300,6 +305,16 @@ export default function AdminDashboard() {
                               role="menuitem"
                             >
                               User Transactions
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedOption('accounts');
+                                setIsDropdownOpen(false);
+                              }}
+                              className="block px-4 py-2 text-sm text-gray-700 hover:bg-[#64A8F0] hover:text-gray-900 w-full text-left"
+                              role="menuitem"
+                            >
+                              User Accounts
                             </button>
                           </div>
                         </div>
@@ -344,7 +359,7 @@ export default function AdminDashboard() {
                         <p className="text-[#FFFFFF]">{userInfo.phone}</p>
                       </div>
                     </div>
-                  ) : (
+                  ) : selectedOption === 'transactions' ? (
                     <div className="space-y-4">
                       {transactions.map((transaction) => (
                         <div key={transaction.id} className="flex justify-between items-center p-2 rounded bg-[#F5F5F5]/10">
@@ -355,6 +370,23 @@ export default function AdminDashboard() {
                           <p className={`text-sm font-medium ${transaction.amount.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>
                             {transaction.amount}
                           </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {userAccounts.map((account, index) => (
+                        <div key={index} className="p-4 rounded-lg bg-[#F5F5F5]/10">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <label className="text-sm text-[#F5F5F5]">Account Number</label>
+                              <p className="text-[#FFFFFF]">{maskSensitiveInfo(account.accountNumber)}</p>
+                            </div>
+                            <div>
+                              <label className="text-sm text-[#F5F5F5]">Balance</label>
+                              <p className="text-[#FFFFFF]">{account.balance}</p>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
