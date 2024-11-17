@@ -1,15 +1,72 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Eye, EyeOff, FileText, UserCog, User, BotIcon as Robot, ChevronDown } from 'lucide-react'
 import { motion } from 'framer-motion'
 import logo from '../img/logo_dark.png'
 
 interface ChatMessage {
-  sender: string
-  message: string
-  timestamp: string
-  isAgent: boolean
+  role: string,
+  content: string
+}
+
+interface CallResponse {
+  event: "calls_response";
+  data: Record<string, Call>;
+}
+
+interface Call {
+  id: string
+  transcript: ChatMessage[]
+  referenced_documents: Document[]
+  user_id: string
+}
+
+interface DBResponse {
+  event: "db_response";
+  data: Database;
+}
+
+interface CombinedResponse {
+  event: "combined_response";
+  calls: Record<string, Call>;
+  db: Database;
+}
+
+interface Database {
+  users: {
+    [key: string]: {
+      name: string
+      accounts: string[]
+      ssn: string
+      address: string
+      date_of_birth: string
+      email: string
+      phone: string
+    }
+  }
+  accounts: {
+    [key: string]: {
+      balance: number
+      statements: {
+        [month: string]: string
+      }
+    }
+  }
+  payments: {
+    [key: string]: {
+      from_account: string
+      to_account: string
+      amount: number
+      date: string
+      status: string
+    }
+  }
+}
+
+export interface CallProps {
+  call?: Call;
+  selectedId: string | undefined;
 }
 
 interface Document {
@@ -23,10 +80,10 @@ interface UserInfo {
   id: string
   name: string
   ssn: string
-  bankProfile: {
-    accountNumber: string
-    balance: string
-  }
+  address: string
+  date_of_birth: string
+  email: string
+  phone: string
 }
 
 interface Transaction {
@@ -47,38 +104,115 @@ export default function AdminDashboard() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedOption, setSelectedOption] = useState('info');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-  const userInfo: UserInfo = {
-    id: "USR12345",
-    name: "John Doe",
-    ssn: "123-45-6789",
+  const [connected, setConnected] = useState(false);
+  const [data, setData] = useState<Record<string, Call>>({});
+  const [selectedId, setSelectedId] = useState<string>("");
+  const [bankData, setBankData] = useState<Database>({
+    users: {},
+    accounts: {},
+    payments: {}
+  });
+  const [socket, setSocket] = useState(null)
+  const [userInfo, setUserInfo] = useState<UserInfo>({
+    id: "",
+    name: "",
+    ssn: "",
     bankProfile: {
-      accountNumber: "9876543210",
-      balance: "$10,000.00"
+      accountNumber: "",
+      balance: ""
     }
-  }
+  });
 
-  const transactions: Transaction[] = [
-    { id: "TRX001", date: "2023-05-01", description: "Grocery Store", amount: "-$50.00" },
-    { id: "TRX002", date: "2023-05-02", description: "Salary Deposit", amount: "+$3000.00" },
-    { id: "TRX003", date: "2023-05-03", description: "Online Shopping", amount: "-$120.00" },
-  ]
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  const chatTranscript: ChatMessage[] = [
-    { sender: "User", message: "Hi, I need help with my account.", timestamp: "10:00 AM", isAgent: false },
-    { sender: "Agent", message: "Hello! I'd be happy to help. Can you please verify your account number?", timestamp: "10:01 AM", isAgent: true },
-    { sender: "User", message: "Sure, it's 9876543210.", timestamp: "10:02 AM", isAgent: false },
-    { sender: "Agent", message: "Thank you. I see you have a question about your recent transaction. What would you like to know?", timestamp: "10:03 AM", isAgent: true }
-  ]
+  useEffect(() => {
+    const wss = new WebSocket(
+      "ws://localhost:8000/ws?client_id=1234",
+    );
+    console.log("useEffect")
+    wss.onopen = () => {
+      console.log('WebSocket connection established')
+      setConnected(true)
+    }
 
-  const documents: Document[] = [
-    { id: "DOC001", name: "Account Statement", type: "PDF" },
-    { id: "DOC002", name: "Transaction Details", type: "PDF" },
-    { id: "DOC003", name: "Dispute Form", type: "DOCX" }
-  ].map(doc => ({ ...doc, status: analyzeDocumentStatus(doc) }));
+    wss.onmessage = (event: MessageEvent) => {
+      console.log("Received message");
+      const data = JSON.parse(event.data)
+      console.log(data)
+      if (data.event === "combined_response") {
+        setData(data.calls)
+        setBankData(data.db)
+      }
+      else if (data.event === "db_response") {
+        setBankData(data.data)
+      }
+      else if (data.event === "calls_response") {
+        setData(data.data)
+      }
+    }
 
-  const maskSensitiveInfo = (info: string, isSSN = false) => {
-    return !showSensitiveInfo ? info.replace(/\w/g, '*') : info;
+    setSocket(wss)
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(
+          JSON.stringify({
+            event: "get_all_dbs",
+          })
+        );
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [socket]);
+
+  const handleCallSelect = (id: string) => {
+    setSelectedId(id);
+    const selectedCall = data[id];
+    if (selectedCall && bankData.users && bankData.users[selectedCall.user_id]) {
+      const user = bankData.users[selectedCall.user_id];
+      const userAccounts = user.accounts.map(accId => {
+        const account = bankData.accounts[accId];
+        return {
+          accountNumber: accId,
+          balance: account ? `$${account.balance.toFixed(2)}` : "N/A"
+        };
+      });
+
+      // Update user info
+      setUserInfo({
+        id: selectedCall.user_id,
+        name: user.name,
+        ssn: user.ssn,
+        address: user.address,
+        date_of_birth: user.date_of_birth,
+        email: user.email,
+        phone: user.phone
+      });
+
+      // Update transactions from payments
+      const userTransactions: Transaction[] = Object.entries(bankData.payments)
+        .filter(([_, payment]) =>
+          payment.from_account === userAccounts[0]?.accountNumber ||
+          payment.to_account === userAccounts[0]?.accountNumber
+        )
+        .map(([id, payment]) => ({
+          id,
+          date: payment.date,
+          description: `${payment.from_account === userAccounts[0]?.accountNumber ? 'Payment to' : 'Payment from'} ${payment.from_account === userAccounts[0]?.accountNumber ? payment.to_account : payment.from_account
+            }`,
+          amount: `${payment.from_account === userAccounts[0]?.accountNumber ? '-' : '+'}$${payment.amount.toFixed(2)}`
+        }));
+
+      setTransactions(userTransactions);
+    }
+  };
+
+  const maskSensitiveInfo = (info: string) => {
+    if (!info) return '';
+    return !showSensitiveInfo ? info.replace(/\d/g, '*') : info;
   }
 
   return (
@@ -111,9 +245,15 @@ export default function AdminDashboard() {
           <div className="p-4">
             <h3 className="text-lg font-semibold mb-4">Previous Messages</h3>
             <ul className="space-y-2">
-              <li className="p-2 hover:bg-[#F5F5F5]/5 rounded cursor-pointer">Previous message 1</li>
-              <li className="p-2 hover:bg-[#F5F5F5]/5 rounded cursor-pointer">Previous message 2</li>
-              <li className="p-2 hover:bg-[#F5F5F5]/5 rounded cursor-pointer">Previous message 3</li>
+              {data && Object.entries(data).map(([id, call]) => (
+                <li
+                  key={id}
+                  className={`p-2 hover:bg-[#F5F5F5]/5 rounded cursor-pointer ${selectedId === id ? 'bg-[#64A8F0]/10' : ''}`}
+                  onClick={() => handleCallSelect(id)}
+                >
+                  {call.id}
+                </li>
+              ))}
             </ul>
           </div>
         </div>
@@ -185,15 +325,23 @@ export default function AdminDashboard() {
                       </div>
                       <div>
                         <label className="text-sm text-[#F5F5F5]">SSN</label>
-                        <p className="text-[#FFFFFF]">{maskSensitiveInfo(userInfo.ssn, true)}</p>
+                        <p className="text-[#FFFFFF]">{maskSensitiveInfo(userInfo.ssn)}</p>
                       </div>
                       <div>
-                        <label className="text-sm text-[#F5F5F5]">Account Number</label>
-                        <p className="text-[#FFFFFF]">{maskSensitiveInfo(userInfo.bankProfile.accountNumber)}</p>
+                        <label className="text-sm text-[#F5F5F5]">Address</label>
+                        <p className="text-[#FFFFFF]">{userInfo.address}</p>
                       </div>
                       <div>
-                        <label className="text-sm text-[#F5F5F5]">Balance</label>
-                        <p className="text-[#FFFFFF]">{userInfo.bankProfile.balance}</p>
+                        <label className="text-sm text-[#F5F5F5]">Date Of Birth</label>
+                        <p className="text-[#FFFFFF]">{userInfo.date_of_birth}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm text-[#F5F5F5]">Email</label>
+                        <p className="text-[#FFFFFF]">{userInfo.email}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm text-[#F5F5F5]">Phone Number</label>
+                        <p className="text-[#FFFFFF]">{userInfo.phone}</p>
                       </div>
                     </div>
                   ) : (
@@ -224,31 +372,35 @@ export default function AdminDashboard() {
                 <div className="p-6">
                   <h2 className="text-lg font-semibold mb-6">Chat Transcript</h2>
                   <div className="space-y-4 h-[400px] overflow-y-auto pr-4">
-                    {chatTranscript.map((message, index) => (
-                      <div
-                        key={index}
-                        className={`p-4 rounded-lg ${
-                          message.isAgent
+                    {selectedId && data[selectedId] ? (
+                      data[selectedId].transcript.map((message, index) => (
+                        <div
+                          key={index}
+                          className={`p-4 rounded-lg ${message.role === 'assistant'
                             ? 'bg-[#F5F5F5]/5 border border-white/10'
                             : 'bg-[#64A8F0]/10 border border-[#64A8F0]/20'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="w-8 h-8 rounded-full bg-[#64A8F0]/20 flex items-center justify-center">
-                            {message.isAgent ? (
-                              <Robot className="w-5 h-5 text-[#64A8F0]" />
-                            ) : (
-                              <User className="w-5 h-5 text-[#64A8F0]" />
-                            )}
+                            }`}
+                        >
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-8 h-8 rounded-full bg-[#64A8F0]/20 flex items-center justify-center">
+                              {message.role === 'assistant' ? (
+                                <Robot className="w-5 h-5 text-[#64A8F0]" />
+                              ) : (
+                                <User className="w-5 h-5 text-[#64A8F0]" />
+                              )}
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium">{message.role}</span>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-sm font-medium">{message.sender}</span>
-                            <span className="text-xs text-[#F5F5F5]/70 ml-2">{message.timestamp}</span>
-                          </div>
+                          <p className="text-[#FFFFFF] ml-11">{message.content}</p>
                         </div>
-                        <p className="text-[#FFFFFF] ml-11">{message.message}</p>
+                      ))
+                    ) : (
+                      <div className="text-center text-[#F5F5F5]/70">
+                        Select a conversation from the sidebar to view the transcript
                       </div>
-                    ))}
+                    )}
                   </div>
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -274,34 +426,39 @@ export default function AdminDashboard() {
                 <div className="p-6">
                   <h2 className="text-lg font-semibold mb-6">Referenced Documents</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {documents.map((doc) => (
-                      <div
-                        key={doc.id}
-                        className="p-4 rounded-lg bg-[#F5F5F5]/5 border border-white/10 hover:border-[#64A8F0]/50 transition-colors"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h3 className="font-medium mb-1">{doc.name}</h3>
-                            <p className="text-sm text-[#F5F5F5]/70">{doc.type}</p>
-                          </div>
-                          <span
-                            className={`text-xs px-2 py-1 rounded-full ${
-                              doc.status === 'urgent'
+                    {selectedId && data[selectedId] ? (
+                      data[selectedId].referenced_documents.map((doc) => (
+                        <div
+                          key={doc.id}
+                          className="p-4 rounded-lg bg-[#F5F5F5]/5 border border-white/10 hover:border-[#64A8F0]/50 transition-colors"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className="font-medium mb-1">{doc.name}</h3>
+                              <p className="text-sm text-[#F5F5F5]/70">{doc.type}</p>
+                            </div>
+                            <span
+                              className={`text-xs px-2 py-1 rounded-full ${doc.status === 'urgent'
                                 ? 'bg-red-500/10 text-red-500'
                                 : doc.status === 'medium'
-                                ? 'bg-yellow-500/10 text-yellow-500'
-                                : 'bg-green-500/10 text-green-500'
-                            }`}
-                          >
-                            {doc.status}
-                          </span>
+                                  ? 'bg-yellow-500/10 text-yellow-500'
+                                  : 'bg-green-500/10 text-green-500'
+                                }`}
+                            >
+                              {doc.status}
+                            </span>
+                          </div>
+                          <button className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#64A8F0]/10 hover:bg-[#64A8F0]/20 text-[#64A8F0] transition-colors">
+                            <FileText className="h-4 w-4" />
+                            View Document
+                          </button>
                         </div>
-                        <button className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#64A8F0]/10 hover:bg-[#64A8F0]/20 text-[#64A8F0] transition-colors">
-                          <FileText className="h-4 w-4" />
-                          View Document
-                        </button>
+                      ))
+                    ) : (
+                      <div className="col-span-3 text-center text-[#F5F5F5]/70">
+                        Select a conversation to view referenced documents
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               </motion.div>
