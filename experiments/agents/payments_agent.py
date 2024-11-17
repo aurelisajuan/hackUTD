@@ -1,6 +1,6 @@
 # agents/payments_agent.py
 
-from .base_agent import BaseAgent
+from swarm import Agent
 from typing import Any, Dict
 from utils.helpers import (
     validate_account_id,
@@ -26,7 +26,7 @@ Your duties involve:
 4. Providing clear, professional, and user-friendly instructions to users.
 """
 
-class PaymentsAgent(BaseAgent):
+class PaymentsAgent(Agent):
     def __init__(
         self,
         transfer_back_to_triage: Callable,

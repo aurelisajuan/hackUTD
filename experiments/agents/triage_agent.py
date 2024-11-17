@@ -1,6 +1,6 @@
 # agents/triage_agent.py
 
-from .base_agent import BaseAgent
+from swarm import   Agent
 from typing import Any, Dict
 from typing import Callable
 import logging
@@ -18,7 +18,7 @@ Your tasks:
 6. Maintain a professional and friendly tone at all times.
 """
 
-class TriageAgent(BaseAgent):
+class TriageAgent(Agent):
     def __init__(self, transfer_to_accounts: Callable, transfer_to_payments: Callable):
         super().__init__(
             name="Triage Agent",

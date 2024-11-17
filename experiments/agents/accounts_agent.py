@@ -1,6 +1,6 @@
 # agents/accounts_agent.py
 
-from .base_agent import BaseAgent
+from swarm import Agent
 from typing import Any, Dict
 from utils.helpers import validate_account_id, get_db, set_db
 from swarm.types import Result
@@ -18,7 +18,7 @@ Your responsibilities include:
 4. Communicating in a polite, empathetic, and user-friendly manner.
 """
 
-class AccountsAgent(BaseAgent):
+class AccountsAgent(Agent):
     def __init__(
         self,
         transfer_to_payments: Callable,
