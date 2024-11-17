@@ -78,6 +78,7 @@ Please review the terms and conditions associated with your loan application.
     pdf_filename = f"loan_application_{user_id}_{timestamp}.pdf"
     tex_filepath = os.path.join(APPLICATIONS_DIR, tex_filename)
     pdf_filepath = os.path.join(APPLICATIONS_DIR, pdf_filename)
+    print("MAKING LOAN FILE")
 
     # Write LaTeX content to .tex file
     try:
@@ -136,7 +137,7 @@ Please review the terms and conditions associated with your loan application.
                 os.remove(file_to_remove)
 
         # Upload the PDF to Pinata
-        upload_pdf_to_pinata(tex_filepath, "LOAN")
+        upload_pdf_to_pinata(pdf_filepath, "LOAN")
     
         return Result(
             value=f"Your loan application has been received and processed successfully. (File: {pdf_filename})",
@@ -206,9 +207,9 @@ def apply_for_credit_card(context_variables: Dict, user_id: str, card_type: str,
         file_to_remove = os.path.join(APPLICATIONS_DIR, f"credit_card_application_{user_id}_{timestamp}{ext}")
         if os.path.exists(file_to_remove):
             os.remove(file_to_remove)
-            
+
     # Upload the PDF to Pinata
-    upload_pdf_to_pinata(tex_filepath, "CARD")
+    upload_pdf_to_pinata(pdf_filepath, "CARD")
 
     return Result(
         value=f"Your credit card application has been received and processed successfully. (File: {pdf_filename})",
