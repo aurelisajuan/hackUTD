@@ -95,11 +95,12 @@ async def websocket_handler(websocket: WebSocket, call_id: str):
             # Not all of them need to be handled, only response_required and reminder_required.
             if request_json["interaction_type"] == "call_details":
                 # print(json.dumps(request_json, indent=2))
-                print(request_json["call"]["from_number"])
-                llm_client = LlmClient(db["users"][request_json["call"]["from_number"]]["name"])
-                llm_client.change_number(request_json["call"]["from_number"])
+                # print(request_json["call"]["from_number"])
+                number = "+1-" + request_json["call"]["from_number"][2:5] + "-" + request_json["call"]["from_number"][5:8] + "-" + request_json["call"]["from_number"][8:]
+                llm_client = LlmClient(db["users"][number]["name"])
+                # llm_client.change_number(number)
+
                 # Send first message to signal ready of server
-                
                 first_event = llm_client.draft_begin_message()
                 await websocket.send_json(first_event.__dict__)
 
