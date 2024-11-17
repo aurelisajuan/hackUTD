@@ -5,7 +5,7 @@ import random
 # Initial Banking Database Structure
 db = {
     "users": {
-        "+14085858267": {
+        "+1-408-585-8267": {
             "name": "Bill Zhang",
             "accounts": ["ACC892", "ACC347"],
             "ssn": "784-29-5163",
@@ -14,7 +14,7 @@ db = {
             "email": "bill.zhang@outlook.com",
             "phone": "+1-408-585-8267",
         },
-        "+19178286465": {
+        "+1-917-828-6465": {
             "name": "Warren Yun",
             "accounts": ["ACC123", "ACC456"],
             "ssn": "123-45-6789",
@@ -240,7 +240,7 @@ calls_db = {}
 def generate_sample_data():
     sample_data = [
         {
-            "id": "+1-214-555-0123",
+            "id": "+1-408-585-8267",
             "time": (
                 datetime.now() - timedelta(minutes=random.randint(0, 120))
             ).isoformat(),
@@ -259,11 +259,11 @@ def generate_sample_data():
                 },
                 {"role": "user", "content": "Yes, it's ACC123"},
             ],
-            "user_id": "+1-214-555-0123",
+            "user_id": "+1-408-585-8267",
             "referenced_documents": [],
         },
         {
-            "id": "+1-469-555-0456",
+            "id": "+1-917-828-6465",
             "time": (
                 datetime.now() - timedelta(minutes=random.randint(0, 120))
             ).isoformat(),
@@ -279,7 +279,7 @@ def generate_sample_data():
                 },
                 {"role": "user", "content": "I want to send $50 to my friend John"},
             ],
-            "user_id": "+1-469-555-0456",
+            "user_id": "+1-917-828-6465",
             "referenced_documents": [],
         },
         {
