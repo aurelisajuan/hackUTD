@@ -1,8 +1,7 @@
 # agents/triage_agent.py
 
 from swarm import   Agent
-from typing import Any, Dict
-from typing import Callable
+from typing import Any, Dict, List, Callable
 import logging
 
 # Define the triage instructions
@@ -19,9 +18,9 @@ Your tasks:
 """
 
 class TriageAgent(Agent):
-    def __init__(self, transfer_to_accounts: Callable, transfer_to_payments: Callable):
+    def __init__(self, functions: List[Callable]):
         super().__init__(
             name="Triage Agent",
             instructions=triage_instructions,
-            functions=[transfer_to_accounts, transfer_to_payments]
+            functions=functions
         )
